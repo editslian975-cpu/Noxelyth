@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithomus - Lian Edition (Extremo)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #010103;
+            font-family: 'Share Tech Mono', monospace;
+            color: #d1d1d1;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* CRT Scanlines & Screen Flicker */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.03));
+            z-index: 999;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        /* Celular Frame */
+        .phone-frame {
+            width: 380px;
+            height: 760px;
+            background-color: #000;
+            border: 12px solid #081208;
+            border-radius: 40px;
+            position: relative;
+            box-shadow: 0 0 60px rgba(0, 255, 85, 0.25), inset 0 0 30px rgba(0,0,0,0.9);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.4s, box-shadow 0.4s;
+        }
+
+        /* Notch */
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 130px;
+            height: 22px;
+            background-color: #081208;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            z-index: 800;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .camera-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #010301;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+        .speaker-slit {
+            width: 45px;
+            height: 4px;
+            background-color: #010301;
+            border-radius: 2px;
+        }
+
+        /* Screen Area */
+        .screen {
+            flex: 1;
+            margin-top: 22px;
+            background: #010501;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Etapas de Tela com Transições Fluídas */
+        .stage {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(0.96);
+            padding: 30px 20px;
+        }
+        .stage.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: scale(1);
+        }
+
+        /* 1. Desligado */
+        #stageOff {
+            background: #000;
+            cursor: pointer;
+        }
+        .power-btn-hint {
+            color: #444;
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+        .power-btn-hint span {
+            display: inline-block;
+            padding: 14px 24px;
+            border: 1px dashed #333;
+            border-radius: 25px;
+            color: #777;
+            transition: all 0.3s;
+        }
+        .power-btn-hint span:hover {
+            border-color: #00ff55;
+            color: #00ff55;
+            background: rgba(0,255,85,0.08);
+            box-shadow: 0 0 15px rgba(0,255,85,0.3);
+        }
+
+        /* 2. Carregando Bateria */
+        #stageBattery {
+            background: #040408;
+        }
+        .battery-icon-box {
+            width: 50px;
+            height: 90px;
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .battery-icon-box::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 5px;
+            background: #333;
+            border-radius: 3px 3px 0 0;
+        }
+        .battery-level {
+            width: 100%;
+            height: 64%;
+            background: #fff;
+            border-radius: 3px;
+            animation: pulseBattery 1.5s infinite;
+        }
+        @keyframes pulseBattery {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* 3. Logo da Marca */
+        #stageBrand {
+            background: #000;
+        }
+        .brand-logo {
+            font-size: 30px;
+            letter-spacing: 8px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255,255,255,0.7);
+            animation: logoZoom 1.5s ease;
+        }
+        @keyframes logoZoom {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .brand-sub {
+            font-size: 11px;
+            color: #555;
+            letter-spacing: 4px;
+            margin-top: 10px;
+        }
+
+        /* 4. Sistema / Boot Infectado */
+        #stageSystem {
+            background: #010801;
+            justify-content: space-between;
+            align-items: stretch;
+        }
+        .glitch-text {
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            letter-spacing: 2px;
+            color: #00ffaa;
+            text-shadow: 0 0 10px rgba(0,255,170,0.8);
+            margin: 8px 0;
+        }
+        .error-box {
+            background: rgba(0, 30, 10, 0.9);
+            border: 1px solid rgba(0, 255, 85, 0.5);
+            border-left: 4px solid #ff3333;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(255,51,51,0.25);
+        }
+
+        /* 5. Tela de Bloqueio */
+        #stageLock {
+            background: radial-gradient(circle at center, #061206 0%, #010201 100%);
+            justify-content: space-between;
+            align-items: stretch;
+        }
+        .lock-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .lock-time {
+            font-size: 82px;
+            font-family: 'VT323', monospace;
+            color: #00ff55;
+            text-shadow: 0 0 20px rgba(0, 255, 85, 0.7);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        .lock-date {
+            font-size: 13px;
+            color: #00aa33;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+        .virus-warning-card {
+            width: 100%;
+            background: rgba(0, 25, 8, 0.85);
+            border: 1px solid rgba(0, 255, 85, 0.3);
+            border-left: 4px solid #ff3333;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+
+        .unlock-footer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .swipe-slider {
+            width: 100%;
+            height: 55px;
+            background: rgba(0, 20, 8, 0.85);
+            border: 1px solid rgba(0, 255, 85, 0.3);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .swipe-handle {
+            width: 47px;
+            height: 47px;
+            background: #00ff55;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0, 255, 85, 0.9);
+            cursor: grab;
+            position: absolute;
+            left: 4px;
+            z-index: 2;
+        }
+        .swipe-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 13px;
+            color: #00aa33;
+            letter-spacing: 2px;
+            z-index: 1;
+        }
+
+        /* 6. TELA INICIAL (HOME) COM 5 APPS NO DOCK */
+        #stageHome {
+            background: radial-gradient(circle at 50% 25%, #031406 0%, #010301 75%);
+            justify-content: flex-start;
+            align-items: center;
+            padding: 0;
+        }
+
+        .home-status-bar {
+            width: 100%;
+            height: 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 18px;
+            font-size: 12px;
+            color: #00ff55;
+            border-bottom: 1px dashed rgba(0, 255, 85, 0.15);
+            background: rgba(0, 15, 5, 0.5);
+        }
+
+        .handdrawn-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hd-signal {
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            letter-spacing: -2px;
+            color: #00ff55;
+            text-shadow: 0 0 5px rgba(0,255,85,0.6);
+        }
+        .hd-battery {
+            width: 22px;
+            height: 11px;
+            border: 1px solid #00ff55;
+            border-radius: 2px;
+            padding: 1px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .hd-battery::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 3px;
+            width: 2px;
+            height: 4px;
+            background: #00ff55;
+            border-radius: 0 1px 1px 0;
+        }
+        .hd-battery-fill {
+            width: 75%;
+            height: 100%;
+            background: #00ff55;
+            box-shadow: 0 0 4px #00ff55;
+        }
+
+        .home-wallpaper-canvas {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            padding: 20px 15px;
+        }
+
+        .home-clock-box {
+            text-align: center;
+            z-index: 5;
+            margin-bottom: 15px;
+        }
+        .home-time {
+            font-size: 64px;
+            font-family: 'VT323', monospace;
+            color: #00ff55;
+            text-shadow: 0 0 15px rgba(0, 255, 85, 0.6);
+            line-height: 1;
+        }
+        .home-date-custom {
+            font-size: 11px;
+            color: #00aa33;
+            letter-spacing: 4px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .handdrawn-sigil {
+            width: 110px;
+            height: 110px;
+            border: 2px dashed rgba(0, 255, 85, 0.4);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            animation: rotateSigil 30s linear infinite;
+            box-shadow: 0 0 25px rgba(0, 255, 85, 0.1);
+            margin-bottom: 20px;
+        }
+        @keyframes rotateSigil {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .handdrawn-sigil::before {
+            content: '⍜ ⌖ ⎈ ⍙';
+            position: absolute;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #00ffaa;
+            letter-spacing: 6px;
+            animation: counterRotate 30s linear infinite;
+        }
+        @keyframes counterRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+        .sigil-core {
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 255, 85, 0.1);
+            border: 1px solid #00ff55;
+            transform: rotate(45deg);
+            box-shadow: 0 0 15px rgba(0,255,85,0.5);
+        }
+
+        .app-dock-grid {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            width: 100%;
+        }
+        .app-icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        .app-icon-item:hover {
+            transform: scale(1.1);
+        }
+        .app-icon-item:active {
+            transform: scale(0.95);
+        }
+        .app-icon-box {
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 20, 8, 0.85);
+            border: 1px solid rgba(0, 255, 85, 0.35);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        }
+        .app-icon-label {
+            font-size: 9px;
+            color: #00aa33;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        .handdrawn-icon {
+            width: 24px;
+            height: 24px;
+            stroke: #00ff55;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 7. CONFIGURAÇÕES */
+        #stageSettings {
+            background: #010501;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+        }
+        .settings-header {
+            height: 45px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-bottom: 1px solid rgba(0, 255, 85, 0.2);
+            background: rgba(0, 15, 5, 0.8);
+        }
+        .settings-back-btn {
+            background: none;
+            border: none;
+            color: #00ff55;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 15px;
+            transition: opacity 0.2s;
+        }
+        .settings-back-btn:active {
+            opacity: 0.5;
+        }
+        .settings-title {
+            font-size: 15px;
+            color: #00ff55;
+            letter-spacing: 1px;
+        }
+        .settings-list {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+        .settings-item {
+            background: rgba(0, 20, 8, 0.7);
+            border: 1px solid rgba(0, 255, 85, 0.2);
+            padding: 14px 16px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #00ff55;
+            font-size: 14px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .settings-item:hover {
+            background: rgba(0, 40, 15, 0.8);
+            border-color: rgba(0, 255, 85, 0.5);
+        }
+
+        .sub-stage {
+            position: absolute;
+            top: 45px; left: 0; width: 100%; height: calc(100% - 45px);
+            background: #010501;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 100;
+            animation: fadeInSub 0.3s ease;
+        }
+        @keyframes fadeInSub {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sub-stage.active-sub {
+            display: flex;
+        }
+        .sub-heading {
+            font-size: 15px;
+            color: #00ff55;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed rgba(0,255,85,0.3);
+            padding-bottom: 8px;
+        }
+        .wifi-network-box {
+            background: rgba(0,20,8,0.8);
+            border: 1px solid rgba(0,255,85,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .wifi-password-modal {
+            margin-top: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .wifi-input {
+            background: #000;
+            border: 1px solid #00ff55;
+            padding: 10px;
+            color: #00ff55;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            border-radius: 4px;
+            outline: none;
+        }
+        .wifi-btn {
+            background: #00ff55;
+            color: #000;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            border-radius: 4px;
+        }
+        .slider-group {
+            margin-bottom: 18px;
+        }
+        .slider-group label {
+            display: block;
+            font-size: 12px;
+            color: #00aa33;
+            margin-bottom: 6px;
+        }
+        .custom-range {
+            width: 100%;
+            accent-color: #00ff55;
+            cursor: pointer;
+        }
+        .about-box {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #88cc99;
+            background: rgba(0,20,8,0.6);
+            border: 1px solid rgba(0,255,85,0.2);
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .about-box span {
+            color: #00ff55;
+            font-weight: bold;
+        }
+
+        /* 8. WHATSAPP */
+        #stageWhatsapp {
+            background: #010501;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+        }
+        .wa-splash {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #071a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            transition: opacity 0.5s ease;
+        }
+        .wa-splash-logo-svg {
+            width: 80px;
+            height: 80px;
+            fill: #25D366;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(37, 211, 102, 0.5));
+        }
+        .wa-splash-text {
+            font-size: 13px;
+            color: #00ff55;
+            letter-spacing: 3px;
+        }
+
+        .wa-main-interface {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #010501;
+        }
+        .wa-topbar {
+            height: 50px;
+            background: rgba(0, 20, 8, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 85, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+        .wa-profile-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .wa-avatar-mini {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #00ff55;
+            border-radius: 50%;
+            background: #110900;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="grad1" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23ff9933"/><stop offset="100%" stop-color="%23441100"/></radialGradient></defs><rect width="100" height="100" fill="url(%23grad1)"/><circle cx="50" cy="50" r="32" fill="none" stroke="%230000ff" stroke-width="8"/><path d="M 22 30 Q 50 65 78 30" stroke="%230000ff" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M 32 20 Q 50 10 68 20" stroke="%230000ff" stroke-width="6" fill="none"/></svg>');
+            background-size: cover;
+        }
+        .wa-contacts-list {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        .wa-contact-card {
+            background: rgba(0, 18, 6, 0.7);
+            border: 1px solid rgba(0, 255, 85, 0.2);
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .wa-contact-card:active {
+            transform: scale(0.98);
+            background: rgba(0, 45, 15, 0.9);
+        }
+        .wa-contact-default-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #2a3942;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .wa-contact-default-avatar::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            width: 30px;
+            height: 22px;
+            background: #8696a0;
+            border-radius: 50% 50% 0 0;
+        }
+        .wa-contact-default-avatar::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            width: 16px;
+            height: 16px;
+            background: #8696a0;
+            border-radius: 50%;
+        }
+
+        .wa-contact-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .wa-contact-name {
+            font-size: 14px;
+            color: #00ff55;
+            font-weight: bold;
+        }
+        .wa-contact-preview {
+            font-size: 11px;
+            color: #77aa88;
+            margin-top: 3px;
+        }
+
+        .wa-chat-room {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #010501;
+            display: none;
+            flex-direction: column;
+            z-index: 180;
+            animation: fadeInChat 0.3s ease;
+        }
+        @keyframes fadeInChat {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .wa-chat-header {
+            height: 50px;
+            background: rgba(0, 20, 8, 0.95);
+            border-bottom: 1px solid rgba(0, 255, 85, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 10px;
+        }
+        .wa-chat-messages {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+        .wa-msg-date-divider {
+            text-align: center;
+            font-size: 10px;
+            color: #447755;
+            margin: 5px 0;
+            background: rgba(0,20,8,0.5);
+            padding: 3px;
+            border-radius: 4px;
+        }
+        .wa-msg-bubble {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+        }
+        .wa-msg-incoming {
+            background: rgba(0, 30, 10, 0.9);
+            border-left: 3px solid #00ff55;
+            align-self: flex-start;
+            color: #a1c2b1;
+        }
+        .wa-msg-outgoing {
+            background: rgba(0, 50, 20, 0.9);
+            border-right: 3px solid #00ffaa;
+            align-self: flex-end;
+            color: #00ffaa;
+        }
+        .wa-msg-call {
+            background: rgba(40, 10, 10, 0.8);
+            border: 1px dashed #ff5555;
+            align-self: center;
+            color: #ff8888;
+            text-align: center;
+            font-size: 11px;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+        .wa-msg-time {
+            font-size: 9px;
+            color: #558866;
+            align-self: flex-end;
+            margin-top: 4px;
+        }
+
+        .wa-chat-footer {
+            height: 55px;
+            background: rgba(0, 15, 5, 0.95);
+            border-top: 1px solid rgba(0, 255, 85, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+        }
+        .wa-input-fake {
+            flex: 1;
+            background: #000;
+            border: 1px solid rgba(0,255,85,0.3);
+            height: 38px;
+            border-radius: 19px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: #558866;
+            font-size: 12px;
+            cursor: not-allowed;
+        }
+        .wa-action-btn {
+            background: rgba(0, 40, 15, 0.8);
+            border: 1px solid #00ff55;
+            color: #00ff55;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s, border-color 0.2s;
+        }
+        .wa-action-btn:active {
+            transform: scale(0.9);
+            background: #ff3333 !important;
+            border-color: #ff3333 !important;
+            color: #fff !important;
+        }
+
+        .wa-profile-view {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #010501;
+            display: none;
+            flex-direction: column;
+            z-index: 190;
+            padding: 20px;
+            align-items: center;
+        }
+        .wa-profile-avatar-big {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid #00ff55;
+            background: #110900;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="grad1" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23ff9933"/><stop offset="100%" stop-color="%23441100"/></radialGradient></defs><rect width="100" height="100" fill="url(%23grad1)"/><circle cx="50" cy="50" r="32" fill="none" stroke="%230000ff" stroke-width="8"/><path d="M 22 30 Q 50 65 78 30" stroke="%230000ff" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M 32 20 Q 50 10 68 20" stroke="%230000ff" stroke-width="6" fill="none"/></svg>');
+            background-size: cover;
+            margin: 20px 0 10px 0;
+            box-shadow: 0 0 20px rgba(0,255,85,0.3);
+        }
+
+        /* 9. APLICATIVO TELEFONE */
+        #stagePhone {
+            background: #010501;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+        }
+        .phone-app-header {
+            height: 45px;
+            background: rgba(0, 20, 8, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 85, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            justify-content: space-between;
+        }
+        .phone-tabs {
+            display: flex;
+            background: rgba(0,15,5,0.9);
+            border-bottom: 1px solid rgba(0,255,85,0.2);
+        }
+        .phone-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #00aa33;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.25s ease;
+        }
+        .phone-tab.active-tab {
+            color: #00ff55;
+            border-bottom-color: #00ff55;
+            background: rgba(0,30,10,0.5);
+            text-shadow: 0 0 8px rgba(0,255,85,0.6);
+        }
+        .phone-pane {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 15px;
+            overflow-y: auto;
+            animation: fadeInPane 0.3s ease;
+        }
+        @keyframes fadeInPane {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .phone-pane.active-pane {
+            display: flex;
+        }
+        .phone-contact-row {
+            background: rgba(0, 20, 8, 0.7);
+            border: 1px solid rgba(0, 255, 85, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .phone-contact-row:hover {
+            background: rgba(0, 40, 15, 0.9);
+        }
+        .phone-contact-row:active {
+            transform: scale(0.98);
+        }
+        .call-btn-mini {
+            background: #00aa33;
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(0,170,51,0.4);
+        }
+
+        .active-call-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #021a08 0%, #010301 90%);
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px;
+            z-index: 250;
+            animation: slideUpCall 0.35s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        @keyframes slideUpCall {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .call-timer {
+            font-family: 'VT323', monospace;
+            font-size: 42px;
+            color: #00ff55;
+            text-shadow: 0 0 15px rgba(0,255,85,0.7);
+            margin-top: 20px;
+        }
+        .hangup-btn {
+            background: #ff3333;
+            color: #fff;
+            border: none;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255,51,51,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .phone-dial-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .phone-dial-btn {
+            background: rgba(0,20,8,0.8);
+            border: 1px solid rgba(0,255,85,0.3);
+            color: #00ff55;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 20px;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .phone-dial-btn:active {
+            background: #00ff55;
+            color: #000;
+        }
+        .phone-input-display {
+            background: #000;
+            border: 1px solid rgba(0,255,85,0.3);
+            height: 45px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 15px;
+            font-size: 22px;
+            color: #00ff55;
+            font-family: 'VT323', monospace;
+            margin-bottom: 10px;
+        }
+
+        /* 10. APLICATIVO GALERIA (5 FOTOS DESENHADAS À MÃO) */
+        #stageGallery {
+            background: #010501;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+        }
+        .gallery-grid {
+            flex: 1;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .gallery-thumb {
+            background: rgba(0,20,8,0.8);
+            border: 1px solid rgba(0,255,85,0.3);
+            border-radius: 8px;
+            height: 130px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .gallery-thumb:hover {
+            transform: scale(1.03);
+            border-color: #00ff55;
+        }
+        .gallery-thumb svg {
+            width: 75%;
+            height: 75%;
+        }
+        .gallery-thumb-label {
+            position: absolute;
+            bottom: 0; width: 100%;
+            background: rgba(0,0,0,0.8);
+            font-size: 10px;
+            color: #00ff55;
+            text-align: center;
+            padding: 3px;
+        }
+
+        .photo-viewer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1,5,1,0.96);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            padding: 20px;
+            animation: fadeInViewer 0.3s ease;
+        }
+        @keyframes fadeInViewer {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .photo-canvas-box {
+            width: 260px;
+            height: 260px;
+            background: #000;
+            border: 2px solid #00ff55;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 25px rgba(0,255,85,0.4);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* 11. APLICATIVO ARQUIVOS (ROTEIROS.TXT E AUDIOS.MIDI) */
+        #stageFiles {
+            background: #010501;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+        }
+        .files-container {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+        .file-folder {
+            background: rgba(0,20,8,0.7);
+            border: 1px solid rgba(0,255,85,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .file-folder:hover {
+            background: rgba(0,35,12,0.9);
+        }
+        .file-item-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(0,10,4,0.6);
+            border: 1px dashed rgba(0,255,85,0.2);
+            border-radius: 6px;
+            margin-top: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .file-item-row:hover {
+            background: rgba(0,25,10,0.8);
+            border-color: #00ff55;
+        }
+
+        .file-viewer-modal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1,5,1,0.96);
+            display: none;
+            flex-direction: column;
+            z-index: 300;
+            padding: 20px;
+            animation: fadeInViewer 0.3s ease;
+        }
+        .file-text-content {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00ff55;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: #00ffaa;
+            line-height: 1.5;
+            overflow-y: auto;
+            margin-top: 15px;
+            box-shadow: inset 0 0 15px rgba(0,255,85,0.2);
+        }
+        .midi-player-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        .midi-wave {
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            color: #00ff55;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #00ff55;
+            animation: pulseBattery 1s infinite;
+        }
+
+        /* Glitch Violento */
+        .violent-glitch {
+            animation: violentShake 0.12s steps(2) infinite, violentColors 0.12s steps(2) infinite !important;
+        }
+        @keyframes violentShake {
+            0% { transform: translate(0, 0) skew(0deg); }
+            20% { transform: translate(-8px, 6px) skew(-10deg); filter: invert(0.8); }
+            40% { transform: translate(10px, -6px) skew(15deg); }
+            60% { transform: translate(-6px, -4px) skew(-5deg); filter: hue-rotate(180deg); }
+            80% { transform: translate(8px, 8px) skew(10deg); }
+            100% { transform: translate(0, 0) skew(0deg); }
+        }
+        @keyframes violentColors {
+            0% { filter: drop-shadow(0 0 10px red); }
+            50% { filter: drop-shadow(0 0 20px lime) invert(0.3); }
+            100% { filter: drop-shadow(0 0 10px red); }
+        }
+
+        .glitch-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 85, 0.25);
+            mix-blend-mode: exclusion;
+            pointer-events: none;
+            display: none;
+            z-index: 900;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-frame" id="phoneFrame">
+        <div class="phone-notch" id="phoneNotch">
+            <div class="camera-dot"></div>
+            <div class="speaker-slit"></div>
+        </div>
+
+        <div class="screen">
+            
+            <!-- 1. ETAPA: DESLIGADO -->
+            <div class="stage active" id="stageOff" onclick="startBootSequence()">
+                <div class="power-btn-hint">
+                    <span>[ ⏻ PRESSIONAR BOTÃO POWER ]</span>
+                </div>
+            </div>
+
+            <!-- 2. ETAPA: CARREGANDO BATERIA -->
+            <div class="stage" id="stageBattery">
+                <div class="battery-icon-box">
+                    <div class="battery-level"></div>
+                </div>
+                <div style="font-size: 13px; color: #777; letter-spacing: 2px;">64% • Carregando</div>
+            </div>
+
+            <!-- 3. ETAPA: LOGO DA MARCA -->
+            <div class="stage" id="stageBrand">
+                <div class="brand-logo">NEXUS</div>
+                <div class="brand-sub">POWERED BY ANDROID</div>
+            </div>
+
+            <!-- 4. ETAPA: SISTEMA / BOOT COM GLITCH -->
+            <div class="stage" id="stageSystem">
+                <div>
+                    <div style="font-size: 11px; color: #00aa33; margin-bottom: 5px;">ALGORITHOMUS KERNEL v4.0</div>
+                    <div id="systemLogs" style="font-size: 13px; line-height: 1.4; color: #00ff55;"></div>
+                </div>
+
+                <div class="error-box">
+                    <div style="font-size: 12px; color: #ff3333; margin-bottom: 4px;">⚠️ ALERTA DE INFECÇÃO CRÍTICA</div>
+                    <div class="glitch-text">⍜⌖⏁⍀⃃⎎⟒⎈ ⍙⎈⍜⋔⏃ ⍃⌰☌⍜⍀⟟⏁⊑⍜⋔⋍⌇</div>
+                    <div style="font-size: 12px; color: #88cc99;">Frequência central tomada por entidade desconhecida.</div>
+                </div>
+            </div>
+
+            <!-- 5. ETAPA: TELA DE BLOQUEIO -->
+            <div class="stage" id="stageLock">
+                <div class="lock-content">
+                    <div style="font-size: 18px; color: #ff3333; margin-bottom: 6px; text-shadow: 0 0 10px #ff3333;">⚠️ SISTEMA COMPROMETIDO</div>
+                    <div class="lock-time" id="lockClock">03:00</div>
+                    <div class="lock-date">QUARTA-FEIRA, 14 OUT</div>
+
+                    <div class="virus-warning-card">
+                        <div style="font-size: 11px; color: #ff3333; margin-bottom: 3px;">AVISO DE FREQUÊNCIA ESTELAR</div>
+                        <div style="font-size: 14px; color: #00ffaa; font-family: 'VT323', monospace; letter-spacing: 2px;">
+                            ⍜⌖⏁⍀⎎⟒⎈ ⍙⎈⍜⋔⏃
+                        </div>
+                        <div style="font-size: 12px; color: #88cc99; margin-top: 4px;">Deslize para liberar a frequência.</div>
+                    </div>
+                </div>
+
+                <div class="unlock-footer">
+                    <div class="swipe-slider" id="swipeSlider">
+                        <div class="swipe-handle" id="swipeHandle">➔</div>
+                        <div class="swipe-text">DESLIZE PARA DESBLOQUEAR</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. TELA INICIAL (HOME) COM 5 APPS -->
+            <div class="stage" id="stageHome">
+                <div class="home-status-bar">
+                    <span id="statusBarClock" style="font-weight: bold;">03:00</span>
+                    <div class="handdrawn-status">
+                        <span class="hd-signal">❚❙█▅</span>
+                        <div class="hd-battery"><div class="hd-battery-fill"></div></div>
+                    </div>
+                </div>
+
+                <div class="home-wallpaper-canvas">
+                    <div class="home-clock-box">
+                        <div class="home-time" id="homeTimeClock">03:00</div>
+                        <div class="home-date-custom">QUARTA-FEIRA, 14 OUTUBRO</div>
+                    </div>
+
+                    <div class="handdrawn-sigil">
+                        <div class="sigil-core"></div>
+                    </div>
+
+                    <div class="app-dock-grid">
+                        <div class="app-icon-item" onclick="openApp('stageSettings')">
+                            <div class="app-icon-box">
+                                <svg class="handdrawn-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            </div>
+                            <span class="app-icon-label">Ajustes</span>
+                        </div>
+
+                        <div class="app-icon-item" onclick="openWhatsApp()">
+                            <div class="app-icon-box" style="background: #021406;">
+                                <svg style="width: 24px; height: 24px; fill: #25D366;" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                            </div>
+                            <span class="app-icon-label">WhatsApp</span>
+                        </div>
+
+                        <div class="app-icon-item" onclick="openApp('stagePhone')">
+                            <div class="app-icon-box">
+                                <svg class="handdrawn-icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </div>
+                            <span class="app-icon-label">Telefone</span>
+                        </div>
+
+                        <div class="app-icon-item" onclick="openApp('stageGallery')">
+                            <div class="app-icon-box">
+                                <svg class="handdrawn-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            </div>
+                            <span class="app-icon-label">Galeria</span>
+                        </div>
+
+                        <div class="app-icon-item" onclick="openApp('stageFiles')">
+                            <div class="app-icon-box">
+                                <svg class="handdrawn-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <span class="app-icon-label">Arquivos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. CONFIGURAÇÕES -->
+            <div class="stage" id="stageSettings">
+                <div class="settings-header">
+                    <button class="settings-back-btn" onclick="openApp('stageHome')">← Voltar</button>
+                    <span class="settings-title">Configurações</span>
+                </div>
+                <div class="settings-list">
+                    <div class="settings-item" onclick="openSub('wifiSub')"><span>[Wi-Fi]</span><span>›</span></div>
+                    <div class="settings-item" onclick="openSub('volumeSub')"><span>[Volume]</span><span>›</span></div>
+                    <div class="settings-item" onclick="openSub('aboutSub')"><span>[Sobre]</span><span>›</span></div>
+                </div>
+
+                <div class="sub-stage" id="wifiSub">
+                    <div class="sub-heading">REDES SEM FIO</div>
+                    <div class="wifi-network-box" onclick="toggleWifiInput()">
+                        <span>📶 M¥LU</span>
+                        <span id="wifiStatusText" style="color: #ff3333; font-size: 12px;">DESCONECTADO</span>
+                    </div>
+                    <div class="wifi-password-modal" id="wifiModal">
+                        <div style="font-size: 11px; color: #88cc99;">Digite a senha (5 dígitos):</div>
+                        <input type="password" maxlength="5" class="wifi-input" id="wifiPassInput" placeholder="•••••">
+                        <button class="wifi-btn" onclick="connectWifi()">CONECTAR</button>
+                    </div>
+                </div>
+
+                <div class="sub-stage" id="volumeSub">
+                    <div class="sub-heading">CONTROLES DE ÁUDIO & SINAL</div>
+                    <div class="slider-group"><label>Volume do Celular</label><input type="range" class="custom-range" min="0" max="100" value="80"></div>
+                    <div class="slider-group"><label>Vibração do Sistema</label><input type="range" class="custom-range" min="0" max="100" value="50"></div>
+                    <div class="slider-group"><label>Som dos Bugs / Glitches</label><input type="range" class="custom-range" min="0" max="100" value="100"></div>
+                </div>
+
+                <div class="sub-stage" id="aboutSub">
+                    <div class="sub-heading">INFORMAÇÕES DO DISPOSITIVO</div>
+                    <div class="about-box">
+                        <div>Modelo: <span>Nexus X-99 Algorithomus Edition</span></div>
+                        <div style="margin-top: 6px;">Fabricante: <span>Nexus Corporation Ltda.</span></div>
+                        <div style="margin-top: 6px;">Proprietário: <span>Lian</span></div>
+                        <div style="margin-top: 6px;">CPF Registrado: <span>***.333.333-**</span></div>
+                        <div style="margin-top: 6px;">Kernel: <span>v4.0.9-stelar</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. WHATSAPP -->
+            <div class="stage" id="stageWhatsapp">
+                <div class="wa-splash" id="waSplash">
+                    <svg class="wa-splash-logo-svg" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                    <div class="wa-splash-text">WHATSAPP</div>
+                </div>
+
+                <div class="wa-main-interface" id="waMainList">
+                    <div class="wa-topbar">
+                        <button class="settings-back-btn" onclick="openApp('stageHome')" style="margin:0; font-size: 12px;">← Sair do Zap</button>
+                        <div class="wa-profile-header" onclick="openWaProfile()">
+                            <div class="wa-avatar-mini"></div>
+                            <span style="font-size: 12px; color: #00aa33;">Perfil</span>
+                        </div>
+                    </div>
+                    
+                    <div class="wa-contacts-list">
+                        <div class="wa-contact-card" onclick="openChat('Mae')">
+                            <div class="wa-contact-default-avatar"></div>
+                            <div class="wa-contact-info">
+                                <span class="wa-contact-name">Mãe</span>
+                                <span class="wa-contact-preview">Filho, venha jantar logo!</span>
+                            </div>
+                        </div>
+
+                        <div class="wa-contact-card" onclick="openChat('Pai')">
+                            <div class="wa-contact-default-avatar"></div>
+                            <div class="wa-contact-info">
+                                <span class="wa-contact-name">Pai</span>
+                                <span class="wa-contact-preview">Me liga assim que puder.</span>
+                            </div>
+                        </div>
+
+                        <div class="wa-contact-card" onclick="openChat('Rav')">
+                            <div class="wa-contact-default-avatar"></div>
+                            <div class="wa-contact-info">
+                                <span class="wa-contact-name">Amigo (Rav)</span>
+                                <span class="wa-contact-preview">Ouve esse áudio sobre o Torajo!</span>
+                            </div>
+                        </div>
+
+                        <div class="wa-contact-card" onclick="openChat('Torajo')">
+                            <div class="wa-contact-default-avatar"></div>
+                            <div class="wa-contact-info">
+                                <span class="wa-contact-name">Torajo</span>
+                                <span class="wa-contact-preview">Tarde demais, Lian...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wa-chat-room" id="waChatRoom">
+                    <div class="wa-chat-header">
+                        <button class="settings-back-btn" onclick="closeChat()">←</button>
+                        <span class="settings-title" id="chatTitle">Nome</span>
+                    </div>
+                    <div class="wa-chat-messages" id="chatMessages"></div>
+                    
+                    <div class="wa-chat-footer">
+                        <div class="wa-input-fake" onclick="triggerGlitchEffect()">Mensagem indisponível...</div>
+                        <div class="wa-action-btn" onclick="triggerAudioError(this)" title="Enviar Áudio">
+                            <svg style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wa-profile-view" id="waProfileView">
+                    <div class="settings-header" style="width: 100%;">
+                        <button class="settings-back-btn" onclick="closeWaProfile()">← Voltar</button>
+                        <span class="settings-title">Meu Perfil</span>
+                    </div>
+                    <div class="wa-profile-avatar-big"></div>
+                    <div style="font-size: 16px; color: #00ff55; font-weight: bold; margin-bottom: 5px;">Lian</div>
+                    <div style="font-size: 12px; color: #77aa88; margin-bottom: 25px;">Disponível • Conectado ao Algoritmo</div>
+                    <div class="about-box" style="width: 100%;">
+                        <div>Nome de Exibição: <span>Lian</span></div>
+                        <div style="margin-top: 8px;">Status: <span>Vigiado pela rede M¥LU</span></div>
+                        <div style="margin-top: 8px;">Chave de Criptografia: <span>OK-333-STELAR</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. APLICATIVO TELEFONE -->
+            <div class="stage" id="stagePhone">
+                <div class="phone-app-header">
+                    <button class="settings-back-btn" onclick="openApp('stageHome')" style="margin:0;">← Voltar</button>
+                    <span class="settings-title">Telefone</span>
+                    <span style="width: 30px;"></span>
+                </div>
+                <div class="phone-tabs">
+                    <div class="phone-tab active-tab" onclick="switchPhoneTab('contactsTab')" id="tabBtn1">Contatos</div>
+                    <div class="phone-tab" onclick="switchPhoneTab('dialerTab')" id="tabBtn2">Discador</div>
+                </div>
+
+                <div class="phone-pane active-pane" id="contactsTab">
+                    <div style="font-size: 11px; color: #558866; margin-bottom: 8px;">CONTATOS DO WHATSAPP</div>
+                    <div class="phone-contact-row" onclick="startCall('Mãe', '(11) 98888-1111')">
+                        <div>
+                            <div style="font-size: 14px; color: #00ff55; font-weight: bold;">Mãe</div>
+                            <div style="font-size: 11px; color: #77aa88;">(11) 98888-1111</div>
+                        </div>
+                        <button class="call-btn-mini">📞</button>
+                    </div>
+                    <div class="phone-contact-row" onclick="startCall('Pai', '(11) 97777-2222')">
+                        <div>
+                            <div style="font-size: 14px; color: #00ff55; font-weight: bold;">Pai</div>
+                            <div style="font-size: 11px; color: #77aa88;">(11) 97777-2222</div>
+                        </div>
+                        <button class="call-btn-mini">📞</button>
+                    </div>
+                    <div class="phone-contact-row" onclick="startCall('Amigo (Rav)', '(11) 96666-3333')">
+                        <div>
+                            <div style="font-size: 14px; color: #00ff55; font-weight: bold;">Amigo (Rav)</div>
+                            <div style="font-size: 11px; color: #77aa88;">(11) 96666-3333</div>
+                        </div>
+                        <button class="call-btn-mini">📞</button>
+                    </div>
+                    <div class="phone-contact-row" onclick="startCall('Torajo', '333-M¥LU')">
+                        <div>
+                            <div style="font-size: 14px; color: #00ff55; font-weight: bold;">Torajo</div>
+                            <div style="font-size: 11px; color: #77aa88;">Frequência Estelar</div>
+                        </div>
+                        <button class="call-btn-mini">📞</button>
+                    </div>
+
+                    <div style="font-size: 11px; color: #558866; margin: 12px 0 8px 0;">SERVIÇOS DE EMERGÊNCIA & UTILIDADE</div>
+                    <div class="phone-contact-row" onclick="startCall('Polícia', '190')">
+                        <div>
+                            <div style="font-size: 14px; color: #ff5555; font-weight: bold;">Polícia</div>
+                            <div style="font-size: 11px; color: #aa7777;">190</div>
+                        </div>
+                        <button class="call-btn-mini" style="background:#aa2222;">📞</button>
+                    </div>
+                    <div class="phone-contact-row" onclick="startCall('Hospital', '192')">
+                        <div>
+                            <div style="font-size: 14px; color: #ff5555; font-weight: bold;">Hospital</div>
+                            <div style="font-size: 11px; color: #aa7777;">192</div>
+                        </div>
+                        <button class="call-btn-mini" style="background:#aa2222;">📞</button>
+                    </div>
+                    <div class="phone-contact-row" onclick="startCall('Escola', '(11) 3344-5566')">
+                        <div>
+                            <div style="font-size: 14px; color: #00ffaa; font-weight: bold;">Escola</div>
+                            <div style="font-size: 11px; color: #77aa99;">(11) 3344-5566</div>
+                        </div>
+                        <button class="call-btn-mini">📞</button>
+                    </div>
+                </div>
+
+                <div class="phone-pane" id="dialerTab">
+                    <div class="phone-input-display" id="phoneDialDisplay"></div>
+                    <div class="phone-dial-grid">
+                        <button class="phone-dial-btn" onclick="phonePress('1')">1</button>
+                        <button class="phone-dial-btn" onclick="phonePress('2')">2</button>
+                        <button class="phone-dial-btn" onclick="phonePress('3')">3</button>
+                        <button class="phone-dial-btn" onclick="phonePress('4')">4</button>
+                        <button class="phone-dial-btn" onclick="phonePress('5')">5</button>
+                        <button class="phone-dial-btn" onclick="phonePress('6')">6</button>
+                        <button class="phone-dial-btn" onclick="phonePress('7')">7</button>
+                        <button class="phone-dial-btn" onclick="phonePress('8')">8</button>
+                        <button class="phone-dial-btn" onclick="phonePress('9')">9</button>
+                        <button class="phone-dial-btn" onclick="phonePress('*')">*</button>
+                        <button class="phone-dial-btn" onclick="phonePress('0')">0</button>
+                        <button class="phone-dial-btn" onclick="phonePress('#')">#</button>
+                    </div>
+                    <button class="settings-back-btn" style="background:#008833; color:#fff; border-radius:20px; padding:10px; margin-top:15px; width:100%; text-align:center; font-weight:bold;" onclick="makeManualCall()">LIGAR</button>
+                </div>
+
+                <div class="active-call-screen" id="activeCallScreen">
+                    <div style="text-align: center; margin-top: 20px;">
+                        <div style="font-size: 12px; color: #00aa33; letter-spacing: 2px;">CHAMADA EM ANDAMENTO</div>
+                        <div style="font-size: 26px; color: #00ff55; font-weight: bold; margin-top: 5px;" id="callContactName">Mãe</div>
+                        <div style="font-size: 12px; color: #77aa88; margin-top: 2px;" id="callNumberSubtitle">(11) 98888-1111</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="font-size: 40px; margin-bottom: 10px; animation: pulseBattery 1s infinite;">🔊</div>
+                        <div style="font-size: 12px; color: #00ffaa; text-align: center; padding: 0 10px;" id="callAudioStatus">Conectando áudio...</div>
+                        <div class="call-timer" id="callTimerDisplay">00:00</div>
+                    </div>
+
+                    <button class="hangup-btn" onclick="endCallManually()" title="Desligar">📞</button>
+                </div>
+            </div>
+
+            <!-- 10. APLICATIVO GALERIA (5 FOTOS DESENHADAS À MÃO) -->
+            <div class="stage" id="stageGallery">
+                <div class="settings-header">
+                    <button class="settings-back-btn" onclick="openApp('stageHome')" style="margin:0;">← Voltar</button>
+                    <span class="settings-title">Galeria de Mídia</span>
+                    <span style="width: 30px;"></span>
+                </div>
+                <div class="gallery-grid">
+                    <!-- Foto 1 -->
+                    <div class="gallery-thumb" onclick="openPhoto(1)">
+                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#00ff55" stroke-width="3" stroke-dasharray="6,4"/><polygon points="50,20 80,75 20,75" fill="none" stroke="#00ffaa" stroke-width="3"/><circle cx="50" cy="55" r="10" fill="#00ff55"/></svg>
+                        <div class="gallery-thumb-label">sigilo_estelar.png</div>
+                    </div>
+                    <!-- Foto 2 -->
+                    <div class="gallery-thumb" onclick="openPhoto(2)">
+                        <svg viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="#ff3333" stroke-width="3"/><line x1="25" y1="25" x2="75" y2="75" stroke="#ff3333" stroke-width="3"/><line x1="75" y1="25" x2="25" y2="75" stroke="#ff3333" stroke-width="3"/><circle cx="50" cy="50" r="15" fill="none" stroke="#00ff55" stroke-width="2"/></svg>
+                        <div class="gallery-thumb-label">corrompido.png</div>
+                    </div>
+                    <!-- Foto 3 -->
+                    <div class="gallery-thumb" onclick="openPhoto(3)">
+                        <svg viewBox="0 0 100 100"><path d="M10 80 Q 30 30 50 80 T 90 80" fill="none" stroke="#00ffaa" stroke-width="4"/><circle cx="70" cy="35" r="8" fill="#00ffaa"/><line x1="10" y1="85" x2="90" y2="85" stroke="#00ff55" stroke-width="3"/></svg>
+                        <div class="gallery-thumb-label">paisagem_net.png</div>
+                    </div>
+                    <!-- Foto 4 -->
+                    <div class="gallery-thumb" onclick="openPhoto(4)">
+                        <svg viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80" stroke="#ff5555" stroke-width="4"/><line x1="80" y1="20" x2="20" y2="80" stroke="#00ff55" stroke-width="4"/><rect x="35" y="35" width="30" height="30" fill="none" stroke="#fff" stroke-width="2"/></svg>
+                        <div class="gallery-thumb-label">glitch_node.png</div>
+                    </div>
+                    <!-- Foto 5 -->
+                    <div class="gallery-thumb" onclick="openPhoto(5)">
+                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="#00ff55" stroke-width="3"/><ellipse cx="50" cy="50" rx="35" ry="12" fill="none" stroke="#00ffaa" stroke-width="2" transform="rotate(30 50 50)"/><circle cx="50" cy="50" r="8" fill="#ff3333"/></svg>
+                        <div class="gallery-thumb-label">olho_myulu.png</div>
+                    </div>
+                </div>
+
+                <!-- Visualizador de Foto Ampliada -->
+                <div class="photo-viewer" id="photoViewer">
+                    <div class="settings-header" style="width: 100%; margin-bottom: 15px;">
+                        <button class="settings-back-btn" onclick="closePhoto()">← Fechar</button>
+                        <span class="settings-title" id="photoViewerTitle">Visualizador</span>
+                    </div>
+                    <div class="photo-canvas-box" id="photoCanvasBox"></div>
+                    <div style="font-size: 11px; color: #77aa88; text-align: center;">Mídia renderizada em alta definição estelar.</div>
+                </div>
+            </div>
+
+            <!-- 11. APLICATIVO ARQUIVOS (ROTEIROS.TXT E AUDIOS.MIDI) -->
+            <div class="stage" id="stageFiles">
+                <div class="settings-header">
+                    <button class="settings-back-btn" onclick="openApp('stageHome')" style="margin:0;">← Voltar</button>
+                    <span class="settings-title">Gerenciador de Arquivos</span>
+                    <span style="width: 30px;"></span>
+                </div>
+                <div class="files-container">
+                    <div style="font-size: 11px; color: #558866; margin-bottom: 4px;">PASTAS DO SISTEMA</div>
+                    
+                    <div class="file-folder">
+                        <div style="font-size: 13px; color: #00ff55; font-weight: bold; margin-bottom: 8px;">📁 /roteiros/</div>
+                        <div class="file-item-row" onclick="openTxtFile('sistema_infectado.txt')">
+                            <span style="font-size: 16px;">📄</span>
+                            <div>
+                                <div style="font-size: 13px; color: #00ffaa;">sistema_infectado.txt</div>
+                                <div style="font-size: 10px; color: #668877;">3.2 KB • Texto Roteiro</div>
+                            </div>
+                        </div>
+                        <div class="file-item-row" onclick="openTxtFile('frequencia_myulu.txt')">
+                            <span style="font-size: 16px;">📄</span>
+                            <div>
+                                <div style="font-size: 13px; color: #00ffaa;">frequencia_myulu.txt</div>
+                                <div style="font-size: 10px; color: #668877;">1.8 KB • Texto Roteiro</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="file-folder" style="margin-top: 10px;">
+                        <div style="font-size: 13px; color: #00ff55; font-weight: bold; margin-bottom: 8px;">📁 /audios_midi/</div>
+                        <div class="file-item-row" onclick="openMidiFile('beat_funk_333.midi')">
+                            <span style="font-size: 16px;">🎵</span>
+                            <div>
+                                <div style="font-size: 13px; color: #ff9933;">beat_funk_333.midi</div>
+                                <div style="font-size: 10px; color: #887766;">142 KB • MIDI Beat</div>
+                            </div>
+                        </div>
+                        <div class="file-item-row" onclick="openMidiFile('piano_estelar.midi')">
+                            <span style="font-size: 16px;">🎵</span>
+                            <div>
+                                <div style="font-size: 13px; color: #ff9933;">piano_estelar.midi</div>
+                                <div style="font-size: 10px; color: #887766;">98 KB • MIDI Melodia</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualizador de Arquivo de Texto / MIDI -->
+                <div class="file-viewer-modal" id="fileViewerModal">
+                    <div class="settings-header" style="width: 100%;">
+                        <button class="settings-back-btn" onclick="closeFileViewer()">← Voltar</button>
+                        <span class="settings-title" id="fileViewerTitle">Arquivo</span>
+                    </div>
+                    <div id="fileContentContainer" style="flex:1; display:flex; flex-direction:column;"></div>
+                </div>
+            </div>
+
+            <div class="glitch-overlay" id="glitchOverlay"></div>
+
+        </div>
+    </div>
+
+    <script>
+        setInterval(() => {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            
+            document.getElementById('lockClock').innerText = timeStr;
+            document.getElementById('statusBarClock').innerText = timeStr;
+            document.getElementById('homeTimeClock').innerText = timeStr;
+        }, 1000);
+
+        function switchStage(fromId, toId) {
+            document.getElementById(fromId).classList.remove('active');
+            document.getElementById(toId).classList.add('active');
+        }
+
+        function triggerViolentGlitch(duration = 400) {
+            const frame = document.getElementById('phoneFrame');
+            const overlay = document.getElementById('glitchOverlay');
+            
+            frame.classList.add('violent-glitch');
+            overlay.style.display = 'block';
+            
+            setTimeout(() => {
+                frame.classList.remove('violent-glitch');
+                overlay.style.display = 'none';
+            }, duration);
+        }
+
+        function triggerGlitchEffect() {
+            triggerViolentGlitch(500);
+        }
+
+        function triggerAudioError(btn) {
+            triggerViolentGlitch(300);
+            btn.style.background = '#ff3333';
+            btn.style.borderColor = '#ff3333';
+            btn.style.color = '#fff';
+            setTimeout(() => {
+                btn.style.background = 'rgba(0, 40, 15, 0.8)';
+                btn.style.borderColor = '#00ff55';
+                btn.style.color = '#00ff55';
+            }, 300);
+        }
+
+        function startBootSequence() {
+            switchStage('stageOff', 'stageBattery');
+
+            setTimeout(() => {
+                switchStage('stageBattery', 'stageBrand');
+
+                setTimeout(() => {
+                    triggerViolentGlitch(600);
+                    switchStage('stageBrand', 'stageSystem');
+                    
+                    const notch = document.getElementById('phoneNotch');
+                    const frame = document.getElementById('phoneFrame');
+                    notch.style.backgroundColor = '#081208';
+                    frame.style.borderColor = '#081208';
+                    frame.style.boxShadow = '0 0 60px rgba(0,255,85,0.35), inset 0 0 30px rgba(0,255,85,0.2)';
+
+                    const bootSteps = [
+                        "Iniciando serviços centrais...",
+                        "Verificando integridade da rede...",
+                        "<span style='color:#ff3333;'>[ERRO CRÍTICO] Interferência na porta 333.</span>",
+                        "Injetando protocolo Algorithomus...",
+                        "<span style='color:#00ffaa;'>⍜⌖⏁⍀⃃⎎⟒⎈ - SINAL INTERCEPTADO</span>"
+                    ];
+
+                    let i = 0;
+                    const logInterval = setInterval(() => {
+                        const logs = document.getElementById('systemLogs');
+                        if (i < bootSteps.length) {
+                            logs.innerHTML += `<div>${bootSteps[i]}</div>`;
+                            if(i === 2 || i === 4) {
+                                triggerViolentGlitch(300);
+                            }
+                            i++;
+                        } else {
+                            clearInterval(logInterval);
+                            
+                            setTimeout(() => {
+                                triggerViolentGlitch(500);
+                                switchStage('stageSystem', 'stageLock');
+                                initSlider();
+                            }, 1200);
+                        }
+                    }, 600);
+
+                }, 1800);
+
+            }, 1800);
+        }
+
+        function initSlider() {
+            const handle = document.getElementById('swipeHandle');
+            const slider = document.getElementById('swipeSlider');
+            let isDragging = false;
+            let startX = 0;
+            let maxDist = slider.clientWidth - handle.clientWidth - 8;
+
+            handle.onmousedown = (e) => {
+                isDragging = true;
+                startX = e.clientX - handle.offsetLeft;
+                e.preventDefault();
+            };
+
+            window.onmousemove = (e) => {
+                if (!isDragging) return;
+                let moveX = e.clientX - startX;
+                if (moveX < 4) moveX = 4;
+                if (moveX > maxDist) moveX = maxDist;
+                handle.style.left = moveX + 'px';
+
+                if (moveX >= maxDist - 10) {
+                    isDragging = false;
+                    unlockDevice();
+                }
+            };
+
+            window.onmouseup = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.style.transition = 'left 0.3s ease';
+                    handle.style.left = '4px';
+                    setTimeout(() => handle.style.transition = 'none', 300);
+                }
+            };
+
+            handle.ontouchstart = (e) => {
+                isDragging = true;
+                startX = e.touches[0].clientX - handle.offsetLeft;
+            };
+
+            window.ontouchmove = (e) => {
+                if (!isDragging) return;
+                let moveX = e.touches[0].clientX - startX;
+                if (moveX < 4) moveX = 4;
+                if (moveX > maxDist) moveX = maxDist;
+                handle.style.left = moveX + 'px';
+
+                if (moveX >= maxDist - 10) {
+                    isDragging = false;
+                    unlockDevice();
+                }
+            };
+
+            window.ontouchend = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.style.transition = 'left 0.3s ease';
+                    handle.style.left = '4px';
+                    setTimeout(() => handle.style.transition = 'none', 300);
+                }
+            };
+        }
+
+        function unlockDevice() {
+            triggerViolentGlitch(700);
+            setTimeout(() => {
+                switchStage('stageLock', 'stageHome');
+            }, 350);
+        }
+
+        function openApp(stageId) {
+            closeAllSubs();
+            document.querySelectorAll('.stage').forEach(el => el.classList.remove('active'));
+            document.getElementById(stageId).classList.add('active');
+        }
+
+        function openSub(subId) {
+            closeAllSubs();
+            document.getElementById(subId).classList.add('active-sub');
+        }
+
+        function closeAllSubs() {
+            document.querySelectorAll('.sub-stage').forEach(el => {
+                el.classList.remove('active-sub');
+            });
+            const wifiModal = document.getElementById('wifiModal');
+            if(wifiModal) wifiModal.style.display = 'none';
+        }
+
+        function toggleWifiInput() {
+            const modal = document.getElementById('wifiModal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function connectWifi() {
+            const pass = document.getElementById('wifiPassInput').value;
+            const status = document.getElementById('wifiStatusText');
+            
+            if (pass === 'Green') {
+                triggerViolentGlitch(400);
+                status.innerText = 'CONECTADO';
+                status.style.color = '#00ff55';
+                document.getElementById('wifiModal').style.display = 'none';
+            } else {
+                alert('Senha incorreta!');
+            }
+        }
+
+        function openWhatsApp() {
+            const splash = document.getElementById('waSplash');
+            splash.style.opacity = '1';
+            splash.style.display = 'flex';
+            
+            openApp('stageWhatsapp');
+
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                }, 500);
+            }, 1200);
+        }
+
+        function openWaProfile() {
+            document.getElementById('waProfileView').style.display = 'flex';
+        }
+
+        function closeWaProfile() {
+            document.getElementById('waProfileView').style.display = 'none';
+        }
+
+        const chatData = {
+            'Mae': [
+                { date: '12 de Outubro' },
+                { sender: 'incoming', text: 'Filho, você levou o casaco hoje?', time: '14:20' },
+                { sender: 'outgoing', text: 'Sim mãe, tá tudo bem por aqui.', time: '14:25' },
+                { type: 'call', text: '📞 Chamada de voz perdida (Duração: 0m 45s)', time: '18:10' },
+                { date: 'Ontem' },
+                { sender: 'incoming', text: 'Filho, onde você está? Responda!', time: '18:30' },
+                { sender: 'outgoing', text: 'Tô no quarto mexendo no celular, mãe.', time: '18:32' },
+                { sender: 'incoming', text: 'O sinal da casa tá oscilante, toma cuidado.', time: '18:35' },
+                { date: 'Hoje' },
+                { sender: 'incoming', text: 'Venha jantar logo, a comida tá esfriando!', time: '12:00' }
+            ],
+            'Pai': [
+                { date: '10 de Outubro' },
+                { sender: 'incoming', text: 'Lian, olhou aquele painel de rede que te falei?', time: '09:12' },
+                { sender: 'outgoing', text: 'Ainda não pai, vou ver mais tarde.', time: '09:15' },
+                { type: 'call', text: '📞 Chamada de vídeo efetuada (Duração: 3m 12s)', time: '20:00' },
+                { date: '12 de Outubro' },
+                { sender: 'incoming', text: 'Cuide-se com esses computadores e cabos estranhos...', time: '21:15' },
+                { sender: 'outgoing', text: 'Pode deixar, pai.', time: '21:20' }
+            ],
+            'Rav': [
+                { date: 'Ontem' },
+                { sender: 'incoming', text: 'Cara, viu aquele site novo do Torajo? Tá muito bizarro.', time: '23:02' },
+                { sender: 'outgoing', text: 'Tô testando aqui agora mesmo.', time: '23:05' },
+                { sender: 'incoming', text: 'Tem uns símbolos estranhos carregando na tela.', time: '23:06' },
+                { type: 'call', text: '📞 Chamada de voz recebida (Duração: 5m 40s)', time: '23:15' },
+                { sender: 'incoming', text: 'Ouve o áudio que te mandei antes de desligar!', time: '23:20' }
+            ],
+            'Torajo': [
+                { date: 'Hoje' },
+                { sender: 'incoming', text: 'O algoritmo está em todo lugar, Lian...', time: '02:45' },
+                { sender: 'incoming', text: 'Você não vai conseguir fechar o app.', time: '02:46' },
+                { sender: 'outgoing', text: 'Quem é você? Sai daqui!', time: '03:01' },
+                { type: 'call', text: '📞 Chamada de voz interceptada (0s)', time: '03:02' },
+                { sender: 'incoming', text: 'Tarde demais. A frequência M¥LU já te encontrou.', time: '03:03' }
+            ]
+        };
+
+        function openChat(contactName) {
+            document.getElementById('chatTitle').innerText = contactName;
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+
+            const messages = chatData[contactName] || [];
+            messages.forEach(msg => {
+                if (msg.date) {
+                    container.innerHTML += `<div class="wa-msg-date-divider">${msg.date}</div>`;
+                } else if (msg.type === 'call') {
+                    container.innerHTML += `<div class="wa-msg-call"><span>${msg.text}</span><div style="font-size:8px; margin-top:2px;">${msg.time}</div></div>`;
+                } else {
+                    const typeClass = msg.sender === 'incoming' ? 'wa-msg-incoming' : 'wa-msg-outgoing';
+                    container.innerHTML += `
+                        <div class="wa-msg-bubble ${typeClass}">
+                            <span>${msg.text}</span>
+                            <span class="wa-msg-time">${msg.time}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('waChatRoom').style.display = 'flex';
+        }
+
+        function closeChat() {
+            document.getElementById('waChatRoom').style.display = 'none';
+        }
+
+        // Funções do App Telefone
+        function switchPhoneTab(tabId) {
+            document.getElementById('tabBtn1').classList.remove('active-tab');
+            document.getElementById('tabBtn2').classList.remove('active-tab');
+            document.getElementById('contactsTab').classList.remove('active-pane');
+            document.getElementById('dialerTab').classList.remove('active-pane');
+
+            if(tabId === 'contactsTab') {
+                document.getElementById('tabBtn1').classList.add('active-tab');
+                document.getElementById('contactsTab').classList.add('active-pane');
+            } else {
+                document.getElementById('tabBtn2').classList.add('active-tab');
+                document.getElementById('dialerTab').classList.add('active-pane');
+            }
+        }
+
+        let phoneNum = "";
+        function phonePress(num) {
+            if(phoneNum.length < 12) {
+                phoneNum += num;
+                document.getElementById('phoneDialDisplay').innerText = phoneNum;
+            }
+        }
+
+        function makeManualCall() {
+            if(phoneNum.length > 0) {
+                startCall('Número Desconhecido', phoneNum);
+            } else {
+                alert('Digite um número para ligar!');
+            }
+        }
+
+        let callTimerInterval = null;
+        let callTimeoutId = null;
+
+        const callAudioScripts = {
+            'Mãe': "Mãe: 'Filho? Por que você demorou tanto pra atender? Venha logo pra mesa!'",
+            'Pai': "Pai: 'Lian? Desliga esse computador e vem ver isso aqui agora.'",
+            'Amigo (Rav)': "Rav: 'Caraca, Lian! Escutou aquele chiado estranho no áudio? É o Torajo!'",
+            'Torajo': "Torajo: '⍜⌖⏁⍀⃃⎎⟒⎈ - Você não pode escapar da rede M¥LU, Lian.'",
+            'Polícia': "Central 190: 'Polícia Militar. Qual é a sua emergência?'",
+            'Hospital': "Central 192: 'Resgate Médico. Onde há feridos?'",
+            'Escola': "Secretaria Escolar: 'Colégio em horário fechado. Deixe seu recado.'"
+        };
+
+        function startCall(name, number) {
+            document.getElementById('callContactName').innerText = name;
+            document.getElementById('callNumberSubtitle').innerText = number;
+            document.getElementById('activeCallScreen').style.display = 'flex';
+
+            const statusEl = document.getElementById('callAudioStatus');
+            const timerEl = document.getElementById('callTimerDisplay');
+            
+            statusEl.innerText = "Discando...";
+            timerEl.innerText = "00:00";
+
+            let seconds = 0;
+            
+            setTimeout(() => {
+                statusEl.innerText = callAudioScripts[name] || "Áudio Conectado: Conexão estabelecida.";
+                triggerViolentGlitch(300);
+            }, 2000);
+
+            callTimerInterval = setInterval(() => {
+                seconds++;
+                let m = String(Math.floor(seconds / 60)).padStart(2, '0');
+                let s = String(seconds % 60).padStart(2, '0');
+                timerEl.innerText = `${m}:${s}`;
+            }, 1000);
+
+            callTimeoutId = setTimeout(() => {
+                endCallManually();
+            }, 10000);
+        }
+
+        function endCallManually() {
+            clearInterval(callTimerInterval);
+            clearTimeout(callTimeoutId);
+            document.getElementById('activeCallScreen').style.display = 'none';
+            phoneNum = "";
+            document.getElementById('phoneDialDisplay').innerText = "";
+            triggerViolentGlitch(300);
+        }
+
+        // Funções da Galeria
+        const gallerySvgs = {
+            1: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#00ff55" stroke-width="3" stroke-dasharray="6,4"/><polygon points="50,20 80,75 20,75" fill="none" stroke="#00ffaa" stroke-width="3"/><circle cx="50" cy="55" r="10" fill="#00ff55"/></svg>`,
+            2: `<svg viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="#ff3333" stroke-width="3"/><line x1="25" y1="25" x2="75" y2="75" stroke="#ff3333" stroke-width="3"/><line x1="75" y1="25" x2="25" y2="75" stroke="#ff3333" stroke-width="3"/><circle cx="50" cy="50" r="15" fill="none" stroke="#00ff55" stroke-width="2"/></svg>`,
+            3: `<svg viewBox="0 0 100 100"><path d="M10 80 Q 30 30 50 80 T 90 80" fill="none" stroke="#00ffaa" stroke-width="4"/><circle cx="70" cy="35" r="8" fill="#00ffaa"/><line x1="10" y1="85" x2="90" y2="85" stroke="#00ff55" stroke-width="3"/></svg>`,
+            4: `<svg viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80" stroke="#ff5555" stroke-width="4"/><line x1="80" y1="20" x2="20" y2="80" stroke="#00ff55" stroke-width="4"/><rect x="35" y="35" width="30" height="30" fill="none" stroke="#fff" stroke-width="2"/></svg>`,
+            5: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="#00ff55" stroke-width="3"/><ellipse cx="50" cy="50" rx="35" ry="12" fill="none" stroke="#00ffaa" stroke-width="2" transform="rotate(30 50 50)"/><circle cx="50" cy="50" r="8" fill="#ff3333"/></svg>`
+        };
+        const galleryNames = { 1: 'sigilo_estelar.png', 2: 'corrompido.png', 3: 'paisagem_net.png', 4: 'glitch_node.png', 5: 'olho_myulu.png' };
+
+        function openPhoto(id) {
+            document.getElementById('photoViewerTitle').innerText = galleryNames[id];
+            document.getElementById('photoCanvasBox').innerHTML = gallerySvgs[id];
+            document.getElementById('photoViewer').style.display = 'flex';
+        }
+
+        function closePhoto() {
+            document.getElementById('photoViewer').style.display = 'none';
+        }
+
+        // Funções de Arquivos (.txt e .midi)
+        const fileTexts = {
+            'sistema_infectado.txt': "ROTEIRO DO SISTEMA - LIAN:\n\n1. O kernel foi invadido na porta 333.\n2. Todos os modded packs de Minecraft Java e Bedrock estão interligados na frequência.\n3. Nenhuma mensagem de áudio pode ser enviada enquanto o Algoritmo estiver ativo.\n4. Mantenha a calma e observe os símbolos estelares.",
+            'frequencia_myulu.txt': "REGISTRO DE FREQUÊNCIA M¥LU:\n\n- Destino: Consciência de Lian.\n- Status: Monitoramento total de chamadas, contatos e arquivos.\n- Nota: Não tente discar para 190. A linha foi redirecionada."
+        };
+
+        function openTxtFile(filename) {
+            document.getElementById('fileViewerTitle').innerText = filename;
+            const container = document.getElementById('fileContentContainer');
+            container.innerHTML = `<div class="file-text-content">${fileTexts[filename]}</div>`;
+            document.getElementById('fileViewerModal').style.display = 'flex';
+        }
+
+        function openMidiFile(filename) {
+            document.getElementById('fileViewerTitle').innerText = filename;
+            const container = document.getElementById('fileContentContainer');
+            container.innerHTML = `
+                <div class="midi-player-box">
+                    <div style="font-size:13px; color:#ff9933;">🎵 REPRODUZINDO ARQUIVO MIDI</div>
+                    <div class="midi-wave">♫ ♬ ♫ ♪ ♬ ♫</div>
+                    <div style="font-size:11px; color:#88cc99;">Sintetizador FL Studio Ativo</div>
+                    <div style="font-size:10px; color:#558866; margin-top:10px;">${filename} - 120 BPM</div>
+                </div>
+            `;
+            document.getElementById('fileViewerModal').style.display = 'flex';
+            triggerViolentGlitch(250);
+        }
+
+        function closeFileViewer() {
+            document.getElementById('fileViewerModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
